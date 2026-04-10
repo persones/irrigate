@@ -1,0 +1,28 @@
+{
+  "name": "vite-vue-starter",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "nodemon src/server/main.js -w src/server",
+    "start": "NODE_ENV=production node src/server/main.js",
+    "build": "vite build",
+    "sec": "vite build --mode secondary"
+  },
+  "type": "module",
+  "dependencies": {
+    "axios": "^1.7.7",
+    "cors": "^2.8.5",
+    "d3": "^7.9.0",
+    "express": "^4.18.2",
+    "mongodb": "^6.4.0",
+    "socket.io": "^4.7.0",
+    "socket.io-client": "^4.7.0",
+    "vite-express": "*",
+    "vue": "^3.2.45"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.0.0",
+    "nodemon": "^2.0.20",
+    "vite": "^4.0.4"
+  }
+}
