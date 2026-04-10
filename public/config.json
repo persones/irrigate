@@ -1,4 +1,74 @@
 {
-  "config": {
+  "zones": [
+    {
+      "id": "1",
+      "name": "Front Yard",
+      "pin": 60,
+      "enabled": true,
+      "schedule": {
+        "days": [
+          "mon",
+          "wed",
+          "fri"
+        ],
+        "startTime": "06:00",
+        "duration": 15
+      },
+      "active": false
+    },
+    {
+      "id": "2",
+      "name": "Back Yard",
+      "pin": 48,
+      "enabled": true,
+      "schedule": {
+        "days": [
+          "mon",
+          "fri"
+        ],
+        "startTime": "07:30",
+        "duration": 25
+      },
+      "active": false
+    },
+    {
+      "id": "3",
+      "name": "Garden Beds",
+      "pin": 49,
+      "enabled": false,
+      "schedule": {
+        "days": [
+          "mon",
+          "thu"
+        ],
+        "startTime": "07:00",
+        "duration": 10
+      },
+      "active": false
+    },
+    {
+      "id": "50d3dd34-e800-4ebd-8acd-5924a01ca753",
+      "name": "Driveway",
+      "pin": 50,
+      "enabled": true,
+      "active": false,
+      "schedule": {
+        "days": [
+          "sat"
+        ],
+        "startTime": "08:00",
+        "duration": 5
+      }
+    }
+  ],
+  "weather": {
+    "apiKey": "",
+    "lat": 37.7749,
+    "lon": -122.4194,
+    "rainThresholdMm": 5
+  },
+  "sensor": {
+    "soilMoisturePin": "P9_33",
+    "dryThreshold": 30
   }
 }
