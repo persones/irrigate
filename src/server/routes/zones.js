@@ -15,11 +15,15 @@
 import express from 'express';
 import { randomUUID } from 'crypto';
 import { activateZone, deactivateZone } from '../scheduler.js';
-import { setupPin } from '../gpio.js';
+import { setupChannel } from '../gpio.js';
 
 const router = express.Router();
 
 const VALID_DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+function validateChannel(channel) {
+  return Number.isInteger(channel) && channel >= 1 && channel <= 8;
+}
 
 function validateSchedule(schedule) {
   if (!schedule || typeof schedule !== 'object') return 'schedule must be an object';
@@ -42,9 +46,12 @@ router.get('/', (req, res) => {
 
 // ─── Create zone ─────────────────────────────────────────────────────────────
 router.post('/', (req, res) => {
-  const { name, pin, enabled = true, schedule } = req.body;
-  if (!name || pin === undefined) {
-    return res.status(400).json({ error: 'name and pin are required' });
+  const { name, channel, enabled = true, schedule } = req.body;
+  if (!name || channel === undefined) {
+    return res.status(400).json({ error: 'name and channel are required' });
+  }
+  if (!validateChannel(channel)) {
+    return res.status(400).json({ error: 'channel must be an integer 1-8' });
   }
   const schedErr = validateSchedule(schedule);
   if (schedErr) return res.status(400).json({ error: schedErr });
@@ -52,7 +59,7 @@ router.post('/', (req, res) => {
   const zone = {
     id: randomUUID(),
     name,
-    pin,
+    channel,
     enabled,
     active: false,
     schedule,
@@ -60,7 +67,7 @@ router.post('/', (req, res) => {
 
   req.app.locals.config.zones.push(zone);
   req.app.locals.saveConfig();
-  setupPin(pin);
+  setupChannel(channel);
   res.status(201).json(zone);
 });
 
@@ -76,11 +83,14 @@ router.put('/:id', (req, res) => {
   const zone = req.app.locals.config.zones.find((z) => z.id === req.params.id);
   if (!zone) return res.status(404).json({ error: 'Zone not found' });
 
-  const { name, pin, enabled } = req.body;
+  const { name, channel, enabled } = req.body;
   if (name !== undefined) zone.name = name;
-  if (pin !== undefined) {
-    zone.pin = pin;
-    setupPin(pin);
+  if (channel !== undefined) {
+    if (!validateChannel(channel)) {
+      return res.status(400).json({ error: 'channel must be an integer 1-8' });
+    }
+    zone.channel = channel;
+    setupChannel(channel);
   }
   if (enabled !== undefined) zone.enabled = enabled;
 

@@ -45,8 +45,8 @@
             <input v-model="newZone.name" type="text" placeholder="e.g. Front Yard" />
           </div>
           <div class="field">
-            <label>GPIO Pin</label>
-            <input v-model.number="newZone.pin" type="number" min="0" />
+            <label>Relay Channel</label>
+            <input v-model.number="newZone.channel" type="number" min="1" max="8" />
           </div>
           <div v-if="addError" class="error-msg">{{ addError }}</div>
           <div class="modal-actions">
@@ -72,7 +72,7 @@ import ZoneCard from './components/ZoneCard.vue';
 import ScheduleEditor from './components/ScheduleEditor.vue';
 import SensorPanel from './components/SensorPanel.vue';
 
-const DEFAULT_PIN = 60; // Default BeagleBone GPIO pin for new zones
+const DEFAULT_CHANNEL = 1;
 
 const DEFAULT_SCHEDULE = {
   days: ['mon', 'wed', 'fri'],
@@ -91,7 +91,7 @@ export default {
       editingZone: null,
       showAddZone: false,
       addError: null,
-      newZone: { name: '', pin: DEFAULT_PIN, schedule: { ...DEFAULT_SCHEDULE, days: [...DEFAULT_SCHEDULE.days] } },
+      newZone: { name: '', channel: DEFAULT_CHANNEL, schedule: { ...DEFAULT_SCHEDULE, days: [...DEFAULT_SCHEDULE.days] } },
     };
   },
   async mounted() {
@@ -166,6 +166,10 @@ export default {
         this.addError = 'Name is required.';
         return;
       }
+      if (!Number.isInteger(this.newZone.channel) || this.newZone.channel < 1 || this.newZone.channel > 8) {
+        this.addError = 'Channel must be an integer between 1 and 8.';
+        return;
+      }
       try {
         const res = await fetch('/api/zones', {
           method: 'POST',
@@ -178,7 +182,7 @@ export default {
           return;
         }
         this.showAddZone = false;
-        this.newZone = { name: '', pin: DEFAULT_PIN, schedule: { ...DEFAULT_SCHEDULE, days: [...DEFAULT_SCHEDULE.days] } };
+        this.newZone = { name: '', channel: DEFAULT_CHANNEL, schedule: { ...DEFAULT_SCHEDULE, days: [...DEFAULT_SCHEDULE.days] } };
         await this.loadZones();
       } catch (err) {
         this.addError = err.message;

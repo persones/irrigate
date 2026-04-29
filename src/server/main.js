@@ -6,7 +6,7 @@ import http from 'http';
 import fs from 'fs';
 
 import { fileURLToPath } from 'url';
-import { setupPin } from './gpio.js';
+import { setupChannel } from './gpio.js';
 import { startScheduler } from './scheduler.js';
 import zonesRouter from './routes/zones.js';
 import sensorsRouter from './routes/sensors.js';
@@ -39,7 +39,7 @@ app.locals.saveConfig = saveConfig;
 // ─── GPIO initialisation ─────────────────────────────────────────────────────
 
 for (const zone of config.zones) {
-  setupPin(zone.pin);
+  setupChannel(zone.channel);
   zone.active = false;
 }
 

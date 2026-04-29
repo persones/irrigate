@@ -3,7 +3,7 @@
     {
       "id": "1",
       "name": "Front Yard",
-      "pin": 60,
+      "channel": 1,
       "enabled": true,
       "schedule": {
         "days": [
@@ -19,7 +19,7 @@
     {
       "id": "2",
       "name": "Back Yard",
-      "pin": 48,
+      "channel": 2,
       "enabled": true,
       "schedule": {
         "days": [
@@ -34,7 +34,7 @@
     {
       "id": "3",
       "name": "Garden Beds",
-      "pin": 49,
+      "channel": 3,
       "enabled": false,
       "schedule": {
         "days": [
@@ -49,7 +49,7 @@
     {
       "id": "50d3dd34-e800-4ebd-8acd-5924a01ca753",
       "name": "Driveway",
-      "pin": 50,
+      "channel": 4,
       "enabled": true,
       "active": false,
       "schedule": {

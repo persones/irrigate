@@ -4,7 +4,7 @@
  * Skips watering if recent rainfall or soil moisture is above threshold.
  */
 
-import { pinHigh, pinLow } from './gpio.js';
+import { channelOn, channelOff } from './gpio.js';
 import { getWeatherData, getSoilMoisture } from './routes/sensors.js';
 
 // Active timers keyed by zone id
@@ -71,12 +71,13 @@ export function activateZone(zone) {
     console.log(`Scheduler: zone ${zone.id} already active`);
     return;
   }
+  const channel = zone.channel;
   console.log(`Scheduler: activating zone ${zone.id} (${zone.name}) for ${zone.schedule.duration} min`);
-  pinHigh(zone.pin);
+  channelOn(channel);
   zone.active = true;
 
   activeTimers[zone.id] = setTimeout(() => {
-    pinLow(zone.pin);
+    channelOff(channel);
     zone.active = false;
     delete activeTimers[zone.id];
     console.log(`Scheduler: zone ${zone.id} (${zone.name}) watering complete`);
@@ -88,11 +89,12 @@ export function activateZone(zone) {
  * @param {object} zone
  */
 export function deactivateZone(zone) {
+  const channel = zone.channel;
   if (activeTimers[zone.id]) {
     clearTimeout(activeTimers[zone.id]);
     delete activeTimers[zone.id];
   }
-  pinLow(zone.pin);
+  channelOff(channel);
   zone.active = false;
   console.log(`Scheduler: zone ${zone.id} (${zone.name}) turned off`);
 }

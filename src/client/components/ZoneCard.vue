@@ -8,7 +8,7 @@
     </div>
 
     <div class="zone-meta">
-      <span class="zone-pin">Pin {{ zone.pin }}</span>
+      <span class="zone-pin">Channel {{ zone.channel }}</span>
       <label class="zone-toggle-label">
         <input
           type="checkbox"
