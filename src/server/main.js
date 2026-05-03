@@ -1,13 +1,15 @@
 import express from 'express';
 import ViteExpress from 'vite-express';
-import bodyParser from 'body-parser';
 import path from 'path';
 import cors from 'cors';
 import http from 'http';
 import fs from 'fs';
 
 import { fileURLToPath } from 'url';
-
+import { setupChannel } from './gpio.js';
+import { startScheduler } from './scheduler.js';
+import zonesRouter from './routes/zones.js';
+import sensorsRouter from './routes/sensors.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,34 +18,49 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-let publicFolder = path.join(__dirname, '..', '..', 'public'); // path.resolve(__dirname, '/../../public')
+const publicFolder = path.join(__dirname, '..', '..', 'public');
 console.log(`public folder: ${publicFolder}`);
 app.use(express.static(publicFolder));
-app.use(bodyParser.urlencoded({ extended: true }));
 
-let config = JSON.parse(fs.readFileSync(__dirname + '/../../public/config.json'));
+// ─── Config ──────────────────────────────────────────────────────────────────
+
+const configPath = path.join(publicFolder, 'config.json');
+let config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+
+/** Persist the in-memory config back to disk. */
+function saveConfig() {
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
+}
+
+// Make config and saveConfig available to route handlers via app.locals
+app.locals.config = config;
+app.locals.saveConfig = saveConfig;
+
+// ─── GPIO initialisation ─────────────────────────────────────────────────────
+
+for (const zone of config.zones) {
+  setupChannel(zone.channel);
+  zone.active = false;
+}
+
+// ─── API routes ───────────────────────────────────────────────────────────────
+
+app.use('/api/zones', zonesRouter);
+app.use('/api/sensors', sensorsRouter);
+
+/** GET /api/status – lightweight health check */
+app.get('/api/status', (_req, res) => {
+  res.json({ ok: true, zonesCount: config.zones.length });
+});
+
+// ─── HTTP server ──────────────────────────────────────────────────────────────
 
 const httpServer = http.createServer(app);
 
-/*
-import { Server } from 'socket.io';
-const io = new Server(httpServer, {
-  cors: {
-    // replace with your actual origin
-    origin: ["http://0.0.0.0:3000"],
-    methods: ["GET", "POST"]
-  }
-});
-
-io.on('connection', (socket) => {
-  console.log('a user connected!');
-  socket.on('ping', (arg) => {
-    socket.emit('state', ok);
-});
-*/
-
 httpServer.listen(3000, () => {
-  console.log("Server is listening!");
+  console.log('Server is listening on port 3000');
+  startScheduler(config);
 });
-  
+
 ViteExpress.bind(app, httpServer);
+
