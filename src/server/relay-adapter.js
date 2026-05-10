@@ -22,9 +22,9 @@ try {
   i2cBus = i2cBusModule.openSync(1);
   // Ensure known startup state on board power-up.
   writeRelayState();
-  console.log(`GPIO: using i2c relay board at 0x${RELAY_I2C_ADDRESS.toString(16)}`);
+  console.log(`Relay-adapter: using i2c relay board at 0x${RELAY_I2C_ADDRESS.toString(16)}`);
 } catch (_) {
-  console.log('GPIO: i2c-bus not available – running relay mock mode');
+  console.log('Relay-adapter: i2c-bus not available – running relay mock mode');
 }
 
 try {
@@ -51,7 +51,7 @@ function writeRelayState() {
     const buffer = Buffer.from([relayStateByte]);
     i2cBus.i2cWriteSync(RELAY_I2C_ADDRESS, 1, buffer);
   } catch (err) {
-    console.error('GPIO: failed to write relay state byte:', err.message);
+    console.error('Relay-adapter: failed to write relay state byte:', err.message);
   }
 }
 
@@ -70,7 +70,7 @@ function setChannelState(channel, isOn) {
   relayStateByte = isOn ? (relayStateByte | mask) : (relayStateByte & ~mask);
   writeRelayState();
   console.log(
-    `GPIO: channel ${normalized} -> ${isOn ? 'ON' : 'OFF'}, byte=0b${relayStateByte
+    `relay-adapter: channel ${normalized} -> ${isOn ? 'ON' : 'OFF'}, byte=0b${relayStateByte
       .toString(2)
       .padStart(8, '0')}`,
   );

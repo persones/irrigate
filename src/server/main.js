@@ -6,7 +6,7 @@ import http from 'http';
 import fs from 'fs';
 
 import { fileURLToPath } from 'url';
-import { setupChannel } from './gpio.js';
+import { setupChannel } from './relay-adapter.js';
 import { startScheduler } from './scheduler.js';
 import zonesRouter from './routes/zones.js';
 import sensorsRouter from './routes/sensors.js';
@@ -35,8 +35,6 @@ function saveConfig() {
 // Make config and saveConfig available to route handlers via app.locals
 app.locals.config = config;
 app.locals.saveConfig = saveConfig;
-
-// ─── GPIO initialisation ─────────────────────────────────────────────────────
 
 for (const zone of config.zones) {
   setupChannel(zone.channel);

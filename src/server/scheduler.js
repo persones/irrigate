@@ -4,7 +4,7 @@
  * Skips watering if recent rainfall or soil moisture is above threshold.
  */
 
-import { channelOn, channelOff } from './gpio.js';
+import { channelOn, channelOff } from './relay-adapter.js';
 import { getWeatherData, getSoilMoisture } from './routes/sensors.js';
 
 // Active timers keyed by zone id

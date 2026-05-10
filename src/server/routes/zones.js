@@ -15,7 +15,7 @@
 import express from 'express';
 import { randomUUID } from 'crypto';
 import { activateZone, deactivateZone } from '../scheduler.js';
-import { setupChannel } from '../gpio.js';
+import { setupChannel } from '../relay-adapter.js';
 
 const router = express.Router();
 

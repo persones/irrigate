@@ -59,6 +59,22 @@
         "startTime": "08:00",
         "duration": 5
       }
+    },
+    {
+      "id": "affe4807-3d64-4668-b3f5-162bd9959a04",
+      "name": "test",
+      "channel": 5,
+      "enabled": true,
+      "active": false,
+      "schedule": {
+        "days": [
+          "mon",
+          "wed",
+          "fri"
+        ],
+        "startTime": "06:00",
+        "duration": 15
+      }
     }
   ],
   "weather": {

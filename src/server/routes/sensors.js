@@ -4,7 +4,7 @@
  */
 
 import express from 'express';
-import { readAnalog } from '../gpio.js';
+import { readAnalog } from '../relay-adapter.js';
 
 const router = express.Router();
 
