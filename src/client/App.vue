@@ -3,7 +3,7 @@
     <header class="app-header">
       <div class="header-content">
         <h1 class="app-title">💧 Irrigate</h1>
-        <span class="app-subtitle">BeagleBone Black Irrigation Controller</span>
+        <span class="app-subtitle">ESP32 Feather Controller + MQTT Server</span>
       </div>
     </header>
 

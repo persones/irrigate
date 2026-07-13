@@ -14,8 +14,11 @@
 
 import express from 'express';
 import { randomUUID } from 'crypto';
-import { activateZone, deactivateZone } from '../scheduler.js';
-import { setupChannel } from '../relay-adapter.js';
+import {
+  publishConfigToController,
+  publishZoneCommand,
+  getCachedZoneState,
+} from '../mqtt-service.js';
 
 const router = express.Router();
 
@@ -41,7 +44,14 @@ function validateSchedule(schedule) {
 
 // ─── List all zones ──────────────────────────────────────────────────────────
 router.get('/', (req, res) => {
-  res.json(req.app.locals.config.zones);
+  const zones = req.app.locals.config.zones.map((zone) => {
+    const active = getCachedZoneState(zone.id);
+    return {
+      ...zone,
+      active: active === undefined ? Boolean(zone.active) : active,
+    };
+  });
+  res.json(zones);
 });
 
 // ─── Create zone ─────────────────────────────────────────────────────────────
@@ -67,7 +77,7 @@ router.post('/', (req, res) => {
 
   req.app.locals.config.zones.push(zone);
   req.app.locals.saveConfig();
-  setupChannel(channel);
+  publishConfigToController(req.app.locals.config);
   res.status(201).json(zone);
 });
 
@@ -90,11 +100,11 @@ router.put('/:id', (req, res) => {
       return res.status(400).json({ error: 'channel must be an integer 1-8' });
     }
     zone.channel = channel;
-    setupChannel(channel);
   }
   if (enabled !== undefined) zone.enabled = enabled;
 
   req.app.locals.saveConfig();
+  publishConfigToController(req.app.locals.config);
   res.json(zone);
 });
 
@@ -105,8 +115,8 @@ router.delete('/:id', (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'Zone not found' });
 
   const [zone] = config.zones.splice(idx, 1);
-  deactivateZone(zone);
   req.app.locals.saveConfig();
+  publishConfigToController(req.app.locals.config);
   res.json({ deleted: zone.id });
 });
 
@@ -127,6 +137,7 @@ router.put('/:id/schedule', (req, res) => {
 
   zone.schedule = req.body;
   req.app.locals.saveConfig();
+  publishConfigToController(req.app.locals.config);
   res.json(zone.schedule);
 });
 
@@ -135,7 +146,8 @@ router.post('/:id/on', (req, res) => {
   const zone = req.app.locals.config.zones.find((z) => z.id === req.params.id);
   if (!zone) return res.status(404).json({ error: 'Zone not found' });
 
-  activateZone(zone);
+  publishZoneCommand(zone.id, true);
+  zone.active = true;
   res.json({ id: zone.id, active: zone.active });
 });
 
@@ -144,7 +156,8 @@ router.post('/:id/off', (req, res) => {
   const zone = req.app.locals.config.zones.find((z) => z.id === req.params.id);
   if (!zone) return res.status(404).json({ error: 'Zone not found' });
 
-  deactivateZone(zone);
+  publishZoneCommand(zone.id, false);
+  zone.active = false;
   res.json({ id: zone.id, active: zone.active });
 });
 

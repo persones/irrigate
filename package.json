@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "nodemon src/server/main.js -w src/server",
+    "serve": "nodemon src/server/main.js -w src/server",
     "start": "NODE_ENV=production node src/server/main.js",
     "build": "vite build",
     "sec": "vite build --mode secondary"
@@ -15,6 +16,7 @@
     "d3": "^7.9.0",
     "express": "^4.18.2",
     "i2c-bus": "^5.2.3",
+    "mqtt": "^5.10.3",
     "mongodb": "^6.4.0",
     "socket.io": "^4.7.0",
     "socket.io-client": "^4.7.0",

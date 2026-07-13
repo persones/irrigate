@@ -6,10 +6,9 @@ import http from 'http';
 import fs from 'fs';
 
 import { fileURLToPath } from 'url';
-import { setupChannel } from './relay-adapter.js';
-import { startScheduler } from './scheduler.js';
 import zonesRouter from './routes/zones.js';
 import sensorsRouter from './routes/sensors.js';
+import { startMqttService, getMqttSnapshot } from './mqtt-service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,7 +36,6 @@ app.locals.config = config;
 app.locals.saveConfig = saveConfig;
 
 for (const zone of config.zones) {
-  setupChannel(zone.channel);
   zone.active = false;
 }
 
@@ -48,7 +46,11 @@ app.use('/api/sensors', sensorsRouter);
 
 /** GET /api/status – lightweight health check */
 app.get('/api/status', (_req, res) => {
-  res.json({ ok: true, zonesCount: config.zones.length });
+  res.json({
+    ok: true,
+    zonesCount: config.zones.length,
+    mqtt: getMqttSnapshot(),
+  });
 });
 
 // ─── HTTP server ──────────────────────────────────────────────────────────────
@@ -57,7 +59,7 @@ const httpServer = http.createServer(app);
 
 httpServer.listen(3000, () => {
   console.log('Server is listening on port 3000');
-  startScheduler(config);
+  startMqttService(config);
 });
 
 ViteExpress.bind(app, httpServer);
