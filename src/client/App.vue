@@ -2,8 +2,14 @@
   <div class="app">
     <header class="app-header">
       <div class="header-content">
-        <h1 class="app-title">💧 Irrigate</h1>
-        <span class="app-subtitle">ESP32 Feather Controller + MQTT Server</span>
+        <div>
+          <h1 class="app-title">💧 Irrigate</h1>
+          <span class="app-subtitle">ESP32 Feather Controller + MQTT Server</span>
+        </div>
+        <div class="controller-indicator" :class="controllerIndicatorClass">
+          <span class="controller-dot" aria-hidden="true"></span>
+          {{ controllerIndicatorText }}
+        </div>
       </div>
     </header>
 
@@ -86,6 +92,7 @@ export default {
   data() {
     return {
       zones: [],
+      controllerFound: null,
       loading: true,
       fetchError: null,
       editingZone: null,
@@ -94,13 +101,29 @@ export default {
       newZone: { name: '', channel: DEFAULT_CHANNEL, schedule: { ...DEFAULT_SCHEDULE, days: [...DEFAULT_SCHEDULE.days] } },
     };
   },
+  computed: {
+    controllerIndicatorClass() {
+      if (this.controllerFound === null) {
+        return 'status-searching';
+      }
+      return this.controllerFound ? 'status-found' : 'status-not-found';
+    },
+    controllerIndicatorText() {
+      if (this.controllerFound === null) {
+        return 'Controller: searching';
+      }
+      return this.controllerFound ? 'Controller: found' : 'Controller: not found';
+    },
+  },
   async mounted() {
-    await this.loadZones();
+    await Promise.all([this.loadZones(), this.loadControllerStatus()]);
     // Poll zone status every 10 seconds to keep active badges current
     this.pollTimer = setInterval(this.loadZones, 10000);
+    this.controllerPollTimer = setInterval(this.loadControllerStatus, 5000);
   },
   beforeUnmount() {
     clearInterval(this.pollTimer);
+    clearInterval(this.controllerPollTimer);
   },
   methods: {
     async loadZones() {
@@ -113,6 +136,20 @@ export default {
         this.fetchError = 'Could not load zones: ' + err.message;
       } finally {
         this.loading = false;
+      }
+    },
+
+    async loadControllerStatus() {
+      try {
+        const res = await fetch('/api/status');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+        const availability = String(data?.mqtt?.availability || '').toLowerCase();
+        const hasControllerState = Boolean(data?.mqtt?.controller);
+        this.controllerFound = availability === 'online' || hasControllerState;
+      } catch (_err) {
+        this.controllerFound = false;
       }
     },
 
@@ -238,7 +275,8 @@ body {
   max-width: 1100px;
   margin: 0 auto;
   display: flex;
-  align-items: baseline;
+  justify-content: space-between;
+  align-items: center;
   gap: 0.8rem;
 }
 
@@ -251,6 +289,42 @@ body {
 .app-subtitle {
   font-size: 0.82rem;
   opacity: 0.8;
+}
+
+.controller-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.controller-dot {
+  width: 0.52rem;
+  height: 0.52rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-found {
+  color: #dfffe6;
+  background: rgba(46, 125, 50, 0.35);
+  border-color: rgba(165, 214, 167, 0.65);
+}
+
+.status-not-found {
+  color: #ffe2e2;
+  background: rgba(198, 40, 40, 0.35);
+  border-color: rgba(239, 154, 154, 0.6);
+}
+
+.status-searching {
+  color: #fff8dc;
+  background: rgba(245, 127, 23, 0.35);
+  border-color: rgba(255, 224, 178, 0.7);
 }
 
 .app-main {
@@ -373,4 +447,11 @@ body {
 
 .btn-save { background: var(--color-primary); color: #fff; }
 .btn-cancel { background: var(--color-off-bg); color: var(--text); }
+
+@media (max-width: 640px) {
+  .header-content {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
 </style>
