@@ -17,7 +17,7 @@ String defaultConfigText() {
 
   JsonArray zones = doc["zones"].to<JsonArray>();
   for (uint8_t i = 1; i <= 8; i++) {
-    JsonObject zone = zones.add<JsonObject>();
+    JsonObject zone = zones.createNestedObject();
     zone["id"] = i;
     zone["name"] = String("Zone ") + i;
     zone["channel"] = i;
@@ -35,7 +35,11 @@ String defaultConfigText() {
 }  // namespace
 
 bool initConfigStore() {
+#if defined(ESP8266)
+  if (!LittleFS.begin()) {
+#else
   if (!LittleFS.begin(true)) {
+#endif
     Serial.println("ConfigStore: LittleFS init failed");
     return false;
   }

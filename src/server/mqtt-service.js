@@ -3,6 +3,7 @@ import mqtt from 'mqtt';
 let client = null;
 let started = false;
 let currentDeviceId = 'irrigate-feather-1';
+let mqttEnabled = false;
 
 const state = {
   availability: 'unknown',
@@ -61,7 +62,7 @@ function onMessage(topic, payload) {
 }
 
 function mqttClientConfig() {
-  const host = process.env.MQTT_URL || 'mqtt://127.0.0.1:1883';
+  const host = process.env.MQTT_URL || 'mqtt://localhost:1883';
   const username = process.env.MQTT_USERNAME;
   const password = process.env.MQTT_PASSWORD;
 
@@ -117,7 +118,17 @@ export function startMqttService(config) {
   started = true;
 
   currentDeviceId = process.env.IRRIGATE_DEVICE_ID || 'irrigate-feather-1';
-  const { host, options } = mqttClientConfig();
+  const clientConfig = mqttClientConfig();
+
+  if (!clientConfig) {
+    mqttEnabled = false;
+    console.warn('MQTT: disabled (set MQTT_URL to connect to a broker)');
+    return;
+  }
+
+  const { host, options } = clientConfig;
+
+  mqttEnabled = true;
 
   client = mqtt.connect(host, options);
 
@@ -136,7 +147,7 @@ export function startMqttService(config) {
 }
 
 export function publishConfigToController(config) {
-  if (!client || !client.connected) {
+  if (!mqttEnabled || !client || !client.connected) {
     return false;
   }
 
@@ -146,7 +157,7 @@ export function publishConfigToController(config) {
 }
 
 export function publishZoneCommand(zoneId, on) {
-  if (!client || !client.connected) {
+  if (!mqttEnabled || !client || !client.connected) {
     return false;
   }
 
@@ -168,6 +179,7 @@ export function getControllerAvailability() {
 
 export function getMqttSnapshot() {
   return {
+    enabled: mqttEnabled,
     availability: state.availability,
     controller: state.controller,
     soilMoisture: state.soilMoisture,

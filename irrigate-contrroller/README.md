@@ -1,13 +1,13 @@
-# Irrigate Controller (ESP32 Feather V2)
+# Irrigate Controller (Adafruit HUZZAH)
 
-This folder contains the PlatformIO firmware for an Adafruit ESP32 Feather V2 (or compatible board).
+This folder contains the PlatformIO firmware for an Adafruit HUZZAH (ESP8266) board or compatible hardware.
 
 ## Responsibilities
 
 - Own relay actuation over I2C
 - Execute schedules locally even when server is unavailable
 - Persist latest config to onboard flash
-- Publish Home Assistant MQTT discovery entities
+- Publish Home Assistaqnt MQTT discovery entities
 - Sync RTC from NTP on boot and every hour
 
 ## Build Requirements

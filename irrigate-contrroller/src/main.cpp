@@ -1,8 +1,13 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
-#include <WiFi.h>
 #include <time.h>
+
+#if defined(ESP8266)
+#include <ESP8266WiFi.h>
+#else
+#include <WiFi.h>
+#endif
 
 #include "config_store.h"
 #include "relay_driver.h"
@@ -139,19 +144,6 @@ String dayShortName(int weekday) {
   }
 }
 
-int findZoneIndex(const String& zoneId) {
-  JsonArray zones = configDoc["zones"].as<JsonArray>();
-  int idx = 0;
-  for (JsonObject zone : zones) {
-    const char* id = zone["id"] | "";
-    if (zoneId == id) {
-      return idx;
-    }
-    idx++;
-  }
-  return -1;
-}
-
 void publishZoneState(JsonObject zone) {
   const String id = String(zone["id"] | "");
   const bool active = zone["active"] | false;
@@ -166,7 +158,7 @@ void publishControllerState() {
 
   char payload[256];
   const size_t n = serializeJson(state, payload, sizeof(payload));
-  mqttClient.publish(controllerStateTopic().c_str(), payload, n, true);
+  mqttClient.publish(controllerStateTopic().c_str(), reinterpret_cast<const uint8_t*>(payload), n, true);
 }
 
 void publishDiscovery() {
@@ -193,7 +185,7 @@ void publishDiscovery() {
     device["name"] = deviceId();
     device["ids"] = deviceId();
     device["mf"] = "Irrigate";
-    device["mdl"] = "ESP32 Feather V2";
+    device["mdl"] = "Adafruit HUZZAH";
 
     payload = "";
     serializeJson(doc, payload);
@@ -216,7 +208,7 @@ void publishDiscovery() {
   device["name"] = deviceId();
   device["ids"] = deviceId();
   device["mf"] = "Irrigate";
-  device["mdl"] = "ESP32 Feather V2";
+  device["mdl"] = "Adafruit HUZZAH";
 
   payload = "";
   serializeJson(doc, payload);

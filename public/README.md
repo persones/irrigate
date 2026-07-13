@@ -9,7 +9,7 @@ This project now runs as two cooperating services:
 
 Set these for the Node server process:
 
-- MQTT_URL (default mqtt://127.0.0.1:1883)
+- MQTT_URL (default mqtt://localhost:1883)
 - MQTT_USERNAME (optional)
 - MQTT_PASSWORD (optional)
 - IRRIGATE_DEVICE_ID (default irrigate-feather-1)
