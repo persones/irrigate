@@ -2,6 +2,7 @@
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <stdio.h>
 #include <time.h>
 
 #include "config_store.h"
@@ -22,7 +23,7 @@ constexpr uint32_t kTelemetryIntervalMs = 30000;
 #endif
 
 #ifndef MQTT_HOST
-#define MQTT_HOST "192.168.1.10"
+#define MQTT_HOST "192.168.86.75"
 #endif
 
 #ifndef MQTT_PORT
@@ -118,6 +119,33 @@ bool zoneScheduledToday(JsonVariantConst daysNode, const String& dayShort) {
   }
 
   return false;
+}
+
+// Returns true if `midnightEpoch` (local midnight, as a Unix time) falls on
+// an interval-scheduled watering day: every `intervalDays` days starting
+// from `anchorDate` (format "YYYY-MM-DD").
+bool zoneScheduledInterval(const String& anchorDate, int intervalDays, time_t midnightEpoch) {
+  if (intervalDays < 1 || anchorDate.length() < 10) {
+    return false;
+  }
+
+  int year = 0, month = 0, day = 0;
+  if (sscanf(anchorDate.c_str(), "%d-%d-%d", &year, &month, &day) != 3) {
+    return false;
+  }
+
+  struct tm anchorTm = {};
+  anchorTm.tm_year = year - 1900;
+  anchorTm.tm_mon = month - 1;
+  anchorTm.tm_mday = day;
+  anchorTm.tm_isdst = -1;
+  const time_t anchorEpoch = mktime(&anchorTm);
+  if (anchorEpoch == static_cast<time_t>(-1)) {
+    return false;
+  }
+
+  const long diffDays = static_cast<long>((midnightEpoch - anchorEpoch) / 86400);
+  return diffDays >= 0 && (diffDays % intervalDays) == 0;
 }
 
 String dayShortName(int weekday) {
@@ -430,6 +458,12 @@ void runSchedulerTick() {
 
   String today = dayShortName(local.tm_wday);
 
+  struct tm midnightTm = local;
+  midnightTm.tm_hour = 0;
+  midnightTm.tm_min = 0;
+  midnightTm.tm_sec = 0;
+  const time_t midnightEpoch = mktime(&midnightTm);
+
   for (JsonObject zone : zones) {
     if (!(zone["enabled"] | false)) {
       continue;
@@ -441,7 +475,14 @@ void runSchedulerTick() {
       continue;
     }
 
-    if (!zoneScheduledToday(schedule["days"], today)) {
+    const String mode = String(schedule["mode"] | "weekly");
+    if (mode == "interval") {
+      const String anchorDate = String(schedule["anchorDate"] | "");
+      const int intervalDays = schedule["intervalDays"] | 0;
+      if (!zoneScheduledInterval(anchorDate, intervalDays, midnightEpoch)) {
+        continue;
+      }
+    } else if (!zoneScheduledToday(schedule["days"], today)) {
       continue;
     }
 

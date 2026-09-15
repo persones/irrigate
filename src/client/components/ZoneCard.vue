@@ -22,7 +22,7 @@
     <div class="zone-schedule-summary">
       <span>⏰ {{ zone.schedule.startTime }}</span>
       <span>⏱ {{ zone.schedule.duration }} min</span>
-      <span>📅 {{ scheduleDays }}</span>
+      <span>📅 {{ scheduleSummary }}</span>
     </div>
 
     <div class="zone-actions">
@@ -60,7 +60,11 @@ export default {
   },
   emits: ['turn-on', 'turn-off', 'toggle-enabled', 'edit-schedule'],
   computed: {
-    scheduleDays() {
+    scheduleSummary() {
+      if (this.zone.schedule.mode === 'interval') {
+        const n = this.zone.schedule.intervalDays;
+        return n === 1 ? 'Daily' : `Every ${n} days`;
+      }
       return (this.zone.schedule.days || []).map((d) => DAY_LABELS[d] || d).join(' ');
     },
   },

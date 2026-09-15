@@ -14,6 +14,20 @@
       </div>
 
       <div class="field">
+        <label>Frequency</label>
+        <div class="mode-picker">
+          <label class="mode-option">
+            <input type="radio" value="weekly" v-model="draft.mode" />
+            Specific days
+          </label>
+          <label class="mode-option">
+            <input type="radio" value="interval" v-model="draft.mode" />
+            Every N days
+          </label>
+        </div>
+      </div>
+
+      <div class="field" v-if="draft.mode === 'weekly'">
         <label>Watering Days</label>
         <div class="day-picker">
           <label
@@ -30,6 +44,15 @@
             />
             {{ day.label }}
           </label>
+        </div>
+      </div>
+
+      <div class="field" v-else>
+        <label>Water every</label>
+        <div class="interval-row">
+          <input v-model.number="draft.intervalDays" type="number" min="1" max="365" />
+          <span>day(s), starting</span>
+          <input v-model="draft.anchorDate" type="date" />
         </div>
       </div>
 
@@ -64,12 +87,16 @@ export default {
   },
   emits: ['close', 'saved'],
   data() {
+    const today = new Date().toISOString().slice(0, 10);
     return {
       allDays: ALL_DAYS,
       draft: {
+        mode: this.zone.schedule.mode || 'weekly',
         startTime: this.zone.schedule.startTime,
         duration: this.zone.schedule.duration,
         days: [...(this.zone.schedule.days || [])],
+        intervalDays: this.zone.schedule.intervalDays || 1,
+        anchorDate: this.zone.schedule.anchorDate || today,
       },
       error: null,
     };
@@ -85,16 +112,42 @@ export default {
         this.error = 'Duration must be at least 1 minute.';
         return;
       }
-      if (!this.draft.days.length) {
+      if (this.draft.mode === 'weekly' && !this.draft.days.length) {
         this.error = 'Select at least one day.';
         return;
       }
+      if (this.draft.mode === 'interval') {
+        if (!this.draft.intervalDays || this.draft.intervalDays < 1) {
+          this.error = 'Enter a frequency of at least 1 day.';
+          return;
+        }
+        if (!this.draft.anchorDate) {
+          this.error = 'Select a start date.';
+          return;
+        }
+      }
+
+      const payload =
+        this.draft.mode === 'interval'
+          ? {
+              mode: 'interval',
+              startTime: this.draft.startTime,
+              duration: this.draft.duration,
+              intervalDays: this.draft.intervalDays,
+              anchorDate: this.draft.anchorDate,
+            }
+          : {
+              mode: 'weekly',
+              startTime: this.draft.startTime,
+              duration: this.draft.duration,
+              days: this.draft.days,
+            };
 
       try {
         const res = await fetch(`/api/zones/${this.zone.id}/schedule`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(this.draft),
+          body: JSON.stringify(payload),
         });
         if (!res.ok) {
           const body = await res.json();
@@ -163,6 +216,44 @@ export default {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
+}
+
+.mode-picker {
+  display: flex;
+  gap: 1rem;
+}
+
+.mode-option {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  font-weight: normal;
+  color: var(--text, #333);
+  cursor: pointer;
+}
+
+.interval-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+}
+
+.interval-row input[type='number'] {
+  width: 4.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 5px;
+  font-size: 0.95rem;
+}
+
+.interval-row input[type='date'] {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 5px;
+  font-size: 0.9rem;
 }
 
 .day-chip {
