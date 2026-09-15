@@ -1,10 +1,11 @@
 {
   "zones": [
     {
-      "id": "1",
-      "name": "Front Yard",
+      "id": "143c5ca1-7fcf-4d3d-a5ce-715a6134e8a9",
+      "name": "front",
       "channel": 1,
       "enabled": true,
+      "active": false,
       "schedule": {
         "days": [
           "mon",
@@ -13,56 +14,27 @@
         ],
         "startTime": "06:00",
         "duration": 15
-      },
-      "active": false
+      }
     },
     {
-      "id": "2",
-      "name": "Back Yard",
+      "id": "df19cf02-a138-448e-a99c-814a006b2f17",
+      "name": "tee",
       "channel": 2,
-      "enabled": true,
-      "schedule": {
-        "days": [
-          "mon",
-          "fri"
-        ],
-        "startTime": "07:30",
-        "duration": 25
-      },
-      "active": false
-    },
-    {
-      "id": "3",
-      "name": "Garden Beds",
-      "channel": 3,
-      "enabled": false,
-      "schedule": {
-        "days": [
-          "mon",
-          "thu"
-        ],
-        "startTime": "07:00",
-        "duration": 10
-      },
-      "active": false
-    },
-    {
-      "id": "50d3dd34-e800-4ebd-8acd-5924a01ca753",
-      "name": "Driveway",
-      "channel": 4,
       "enabled": true,
       "active": false,
       "schedule": {
         "days": [
-          "sat"
+          "mon",
+          "wed",
+          "fri"
         ],
-        "startTime": "08:00",
-        "duration": 5
+        "startTime": "06:00",
+        "duration": 15
       }
     },
     {
-      "id": "affe4807-3d64-4668-b3f5-162bd9959a04",
-      "name": "test",
+      "id": "80e5964e-9fbb-4d3a-967f-92e865a82ee0",
+      "name": "gsgs",
       "channel": 5,
       "enabled": true,
       "active": false,

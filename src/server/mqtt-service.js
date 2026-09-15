@@ -21,25 +21,36 @@ function withBase(suffix) {
   return `${topicBase()}${suffix}`;
 }
 
+function withOptionalLeadingSlash(topic) {
+  return topic.startsWith('/') ? topic : `/${topic}`;
+}
+
+function topicVariants(topic) {
+  const variants = new Set([topic, withOptionalLeadingSlash(topic)]);
+  return [...variants];
+}
+
 function parseZoneIdFromStateTopic(topic) {
-  const prefix = withBase('/zone/');
   const suffix = '/state';
-  if (!topic.startsWith(prefix) || !topic.endsWith(suffix)) {
-    return null;
+  for (const prefix of [withBase('/zone/'), withOptionalLeadingSlash(withBase('/zone/'))]) {
+    if (!topic.startsWith(prefix) || !topic.endsWith(suffix)) {
+      continue;
+    }
+    return topic.slice(prefix.length, topic.length - suffix.length);
   }
-  return topic.slice(prefix.length, topic.length - suffix.length);
+  return null;
 }
 
 function onMessage(topic, payload) {
   const text = payload.toString('utf8');
   state.lastMessageAt = Date.now();
 
-  if (topic === withBase('/availability')) {
+  if (topicVariants(withBase('/availability')).includes(topic)) {
     state.availability = text;
     return;
   }
 
-  if (topic === withBase('/state')) {
+  if (topicVariants(withBase('/state')).includes(topic)) {
     try {
       state.controller = JSON.parse(text);
     } catch {
@@ -48,7 +59,7 @@ function onMessage(topic, payload) {
     return;
   }
 
-  if (topic === withBase('/telemetry/soilMoisture')) {
+  if (topicVariants(withBase('/telemetry/soilMoisture')).includes(topic)) {
     const value = Number(text);
     state.soilMoisture = Number.isFinite(value) ? value : null;
     return;
@@ -84,21 +95,28 @@ function mqttClientConfig() {
 
 function subscribeCoreTopics() {
   if (!client) return;
-  client.subscribe(withBase('/availability'));
-  client.subscribe(withBase('/state'));
-  client.subscribe(withBase('/telemetry/soilMoisture'));
-  client.subscribe(withBase('/zone/+/state'));
+  for (const topic of [
+    withBase('/availability'),
+    withOptionalLeadingSlash(withBase('/availability')),
+    withBase('/state'),
+    withOptionalLeadingSlash(withBase('/state')),
+    withBase('/telemetry/soilMoisture'),
+    withOptionalLeadingSlash(withBase('/telemetry/soilMoisture')),
+    withBase('/zone/+/state'),
+    withOptionalLeadingSlash(withBase('/zone/+/state')),
+  ]) {
+    client.subscribe(topic);
+  }
 }
 
 function normalizeConfigForController(config) {
-  return {
-    version: 1,
-    deviceId: currentDeviceId,
+  return {P
+    /*version: 1,
     timezone: process.env.IRRIGATE_TIMEZONE || 'UTC0',
     relay: {
       i2cAddress: Number(process.env.IRRIGATE_RELAY_I2C_ADDRESS || 39),
       channels: Number(process.env.IRRIGATE_RELAY_CHANNELS || 8),
-    },
+      },*/
     zones: (config.zones || []).map((zone) => ({
       id: String(zone.id),
       name: zone.name,
@@ -110,7 +128,7 @@ function normalizeConfigForController(config) {
         durationMin: Number(zone.schedule?.duration || 10),
       },
     })),
-  };
+  }
 }
 
 export function startMqttService(config) {
@@ -139,6 +157,12 @@ export function startMqttService(config) {
     publishConfigToController(config);
   });
 
+  client.on('reconnect', () => {
+    console.log(`MQTT: reconnecting to ${host}`);
+    client.publish(withBase('/server/availability'), 'online', { retain: true, qos: 1 });
+    publishConfigToController(config);
+  });
+
   client.on('message', onMessage);
 
   client.on('error', (err) => {
@@ -152,7 +176,11 @@ export function publishConfigToController(config) {
   }
 
   const payload = JSON.stringify(normalizeConfigForController(config));
-  client.publish(withBase('/config/set'), payload, { retain: true, qos: 1 });
+  const configTopic = withBase('/config/set');
+  client.publish(configTopic, payload, { retain: true, qos: 1 });
+  client.publish(withOptionalLeadingSlash(configTopic), payload, { retain: true, qos: 1 });
+  console.log('topic: ' + configTopic + ' payload: ' + payload);
+  console.log('topic length: ' + configTopic.length + ' payload length: ' + payload.length);
   return true;
 }
 
@@ -161,7 +189,9 @@ export function publishZoneCommand(zoneId, on) {
     return false;
   }
 
-  client.publish(withBase(`/zone/${zoneId}/set`), on ? 'ON' : 'OFF', { retain: false, qos: 1 });
+  const zoneTopic = withBase(`/zone/${zoneId}/set`);
+  client.publish(zoneTopic, on ? 'ON' : 'OFF', { retain: false, qos: 1 });
+  client.publish(withOptionalLeadingSlash(zoneTopic), on ? 'ON' : 'OFF', { retain: false, qos: 1 });
   return true;
 }
 

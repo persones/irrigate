@@ -8,7 +8,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import zonesRouter from './routes/zones.js';
 import sensorsRouter from './routes/sensors.js';
-import { startMqttService, getMqttSnapshot } from './mqtt-service.js';
+import { startMqttService, getMqttSnapshot, publishConfigToController } from './mqtt-service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,6 +51,17 @@ app.get('/api/status', (_req, res) => {
     zonesCount: config.zones.length,
     mqtt: getMqttSnapshot(),
   });
+});
+
+app.post('/api/transmit-config', (_req, res) => {
+  console.log(config);
+  console.log(config.zones);
+  const success = publishConfigToController(config);
+  if (success) {
+    res.json({ ok: true });
+  } else {
+    res.status(500).json({ ok: false, error: 'Failed to transmit config via MQTT' });
+  }
 });
 
 // ─── HTTP server ──────────────────────────────────────────────────────────────

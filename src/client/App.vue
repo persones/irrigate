@@ -38,6 +38,7 @@
             @turn-off="turnOff"
             @toggle-enabled="toggleEnabled"
             @edit-schedule="openScheduleEditor"
+            @delete-zone="deleteZone"
           />
         </div>
       </section>
@@ -69,7 +70,8 @@
         @close="editingZone = null"
         @saved="onScheduleSaved"
       />
-    </main>
+      <button class="btn" @click="transmitConfig">Transmit Config</button>
+    </main> 
   </div>
 </template>
 
@@ -187,6 +189,22 @@ export default {
       }
     },
 
+    async deleteZone(id) {
+      const zone = this.zones.find((z) => z.id === id);
+      const zoneName = zone ? zone.name : 'this zone';
+      if (!window.confirm(`Delete ${zoneName}? This cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/zones/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await this.loadZones();
+      } catch (err) {
+        this.fetchError = 'Could not delete zone: ' + err.message;
+      }
+    },
+
     openScheduleEditor(id) {
       this.editingZone = this.zones.find((z) => z.id === id) || null;
     },
@@ -225,6 +243,16 @@ export default {
         this.addError = err.message;
       }
     },
+    transmitConfig() {
+      fetch('/api/transmit-config', { method: 'POST' })
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          alert('Config transmitted successfully.');
+        })
+        .catch((err) => {
+          alert('Failed to transmit config: ' + err.message);
+        });
+    }
   },
 };
 </script>

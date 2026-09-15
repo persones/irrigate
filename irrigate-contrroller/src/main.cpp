@@ -17,17 +17,26 @@ constexpr uint32_t kMqttReconnectIntervalMs = 5000;
 constexpr uint32_t kNtpSyncIntervalMs = 60UL * 60UL * 1000UL;
 constexpr uint32_t kSchedulerTickMs = 1000;
 constexpr uint32_t kTelemetryIntervalMs = 30000;
+constexpr uint32_t kAvailabilityRefreshMs = 15000;
+constexpr uint16_t kMqttPacketBufferSize = 4096;
+
+#if defined(ESP32)
+// ADC2 pins cannot be read while Wi-Fi is active on ESP32.
+constexpr uint8_t kSoilMoisturePin = 34;  // ADC1
+#else
+constexpr uint8_t kSoilMoisturePin = A1;
+#endif
 
 #ifndef WIFI_SSID
-#define WIFI_SSID "CHANGE_ME"
+#define WIFI_SSID "Julyal"
 #endif
 
 #ifndef WIFI_PASSWORD
-#define WIFI_PASSWORD "CHANGE_ME"
+#define WIFI_PASSWORD "leftjack"
 #endif
 
 #ifndef MQTT_HOST
-#define MQTT_HOST "192.168.1.10"
+#define MQTT_HOST "192.168.86.75"
 #endif
 
 #ifndef MQTT_PORT
@@ -50,6 +59,7 @@ uint32_t lastMqttReconnectAttemptMs = 0;
 uint32_t lastSchedulerTickMs = 0;
 uint32_t lastTelemetryMs = 0;
 uint32_t lastNtpSyncMs = 0;
+uint32_t lastAvailabilityMs = 0;
 int lastMinute = -1;
 
 String deviceId() {
@@ -59,6 +69,13 @@ String deviceId() {
 
 String baseTopic() {
   return String("irrigate/") + deviceId();
+}
+
+String mqttClientId() {
+  String mac = WiFi.macAddress();
+  mac.replace(":", "");
+  mac.toLowerCase();
+  return deviceId() + "-controller-" + mac;
 }
 
 String availabilityTopic() {
@@ -161,6 +178,20 @@ void publishControllerState() {
   mqttClient.publish(controllerStateTopic().c_str(), reinterpret_cast<const uint8_t*>(payload), n, true);
 }
 
+void publishAvailability(bool force = false) {
+  if (!mqttClient.connected()) {
+    return;
+  }
+
+  if (!force && (millis() - lastAvailabilityMs < kAvailabilityRefreshMs)) {
+    return;
+  }
+
+  if (mqttClient.publish(availabilityTopic().c_str(), "online", true)) {
+    lastAvailabilityMs = millis();
+  }
+}
+
 void publishDiscovery() {
   StaticJsonDocument<512> doc;
   String payload;
@@ -218,13 +249,18 @@ void publishDiscovery() {
 
 void applyZoneCommand(const String& zoneId, bool isOn) {
   JsonArray zones = configDoc["zones"].as<JsonArray>();
+  Serial.printf("MQTT: applying zone command zone=%s isOn=%d\n", zoneId.c_str(), isOn);
+  Serial.println("nubmer of zones: " + String(zones.size()));
   for (JsonObject zone : zones) {
     if (zoneId != String(zone["id"] | "")) {
+      Serial.printf("MQTT: skipping zone %s\n", String(zone["id"] | "").c_str());
       continue;
     }
+    Serial.printf("MQTT: found zone %s, applying command isOn=%d\n", zoneId.c_str(), isOn);
 
     const uint8_t channel = zone["channel"] | 0;
     if (isOn) {
+      Serial.printf("MQTT: zone=%s channel=%u ON\n", zoneId.c_str(), channel);
       relayChannelOn(channel);
       zone["active"] = true;
       const int durationMin = zone["schedule"]["durationMin"] | zone["schedule"]["duration"] | 10;
@@ -244,11 +280,22 @@ void applyZoneCommand(const String& zoneId, bool isOn) {
 void handleMqttMessage(char* topic, uint8_t* payload, unsigned int len) {
   String topicStr(topic);
   String body;
+  topicStr.trim();
   for (unsigned int i = 0; i < len; i++) {
     body += static_cast<char>(payload[i]);
   }
+  Serial.printf("MQTT RX: topic=%s body=%s\n", topicStr.c_str(), body.c_str());
 
-  if (topicStr == configSetTopic()) {
+  const String topicNoSlash = topicStr.startsWith("/") ? topicStr.substring(1) : topicStr;
+  const String configTopic = configSetTopic();
+  const String configAltTopic = "/" + configTopic;
+  if (topicStr == configTopic || topicStr == configAltTopic || topicNoSlash == configTopic) {
+    body.trim();
+    if (body.length() == 0) {
+      Serial.println("MQTT: ignoring empty config payload");
+      return;
+    }
+
     DynamicJsonDocument incoming(8192);
     DeserializationError err = deserializeJson(incoming, body);
     if (err) {
@@ -265,19 +312,27 @@ void handleMqttMessage(char* topic, uint8_t* payload, unsigned int len) {
     initRelayDriver(i2cAddress, channels);
     relayAllOff();
 
+    Serial.printf("MQTT: applied config from server, zones=%d\n", configDoc["zones"].size());
     publishDiscovery();
     publishControllerState();
-    Serial.println("MQTT: applied config from server");
     return;
   }
 
+  Serial.printf("MQTT: checking for zone command, topic=%s\n", topicStr.c_str());
   const String prefix = baseTopic() + "/zone/";
+  const String prefixAlt = "/" + prefix;
   const String suffix = "/set";
-  if (topicStr.startsWith(prefix) && topicStr.endsWith(suffix)) {
+  const bool zoneMatches = (topicStr.startsWith(prefix) && topicStr.endsWith(suffix)) ||
+                          (topicStr.startsWith(prefixAlt) && topicStr.endsWith(suffix)) ||
+                          (topicNoSlash.startsWith(prefix) && topicNoSlash.endsWith(suffix));
+  Serial.printf("MQTT: zoneMatches=%d\n", zoneMatches);
+  if (zoneMatches) {
+    const String zoneTopic = topicStr.startsWith("/") ? topicStr.substring(1) : topicStr;
     const int idStart = prefix.length();
-    const int idEnd = topicStr.length() - suffix.length();
-    const String zoneId = topicStr.substring(idStart, idEnd);
+    const int idEnd = zoneTopic.length() - suffix.length();
+    const String zoneId = zoneTopic.substring(idStart, idEnd);
     const bool turnOn = body == "ON" || body == "on" || body == "1";
+    Serial.printf("MQTT: zone command zone=%s turnOn=%d\n", zoneId.c_str(), turnOn);
     applyZoneCommand(zoneId, turnOn);
   }
 }
@@ -340,7 +395,7 @@ bool connectMqtt() {
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
   mqttClient.setCallback(handleMqttMessage);
 
-  const String clientId = deviceId() + "-controller";
+  const String clientId = mqttClientId();
   const String willTopic = availabilityTopic();
 
   bool connected = false;
@@ -356,9 +411,11 @@ bool connectMqtt() {
     return false;
   }
 
-  mqttClient.publish(availabilityTopic().c_str(), "online", true);
+  publishAvailability(true);
   mqttClient.subscribe(configSetTopic().c_str());
+  mqttClient.subscribe(("/" + configSetTopic()).c_str());
   mqttClient.subscribe((baseTopic() + "/zone/+/set").c_str());
+  mqttClient.subscribe(("/" + baseTopic() + "/zone/+/set").c_str());
 
   publishDiscovery();
   publishControllerState();
@@ -373,7 +430,7 @@ bool connectMqtt() {
 }
 
 void publishTelemetry() {
-  const int raw = analogRead(A0);
+  const int raw = analogRead(kSoilMoisturePin);
   const float normalized = static_cast<float>(raw) / 4095.0f;
   const int moisture = constrain(static_cast<int>((1.0f - normalized) * 100.0f), 0, 100);
 
@@ -454,7 +511,12 @@ void runSchedulerTick() {
 void setup() {
   Serial.begin(115200);
   delay(500);
-
+  if (mqttClient.setBufferSize(kMqttPacketBufferSize)) {
+    Serial.printf("MQTT: packet buffer set to %u bytes\n", kMqttPacketBufferSize);
+  } else {
+    Serial.printf("MQTT: failed to set packet buffer to %u bytes\n", kMqttPacketBufferSize);
+  }
+  Serial.println("config topic: " + configSetTopic());
   if (!initConfigStore()) {
     Serial.println("Boot: config store init failed");
   }
@@ -491,6 +553,7 @@ void loop() {
     connectMqtt();
   }
   mqttClient.loop();
+  publishAvailability();
 
   if (millis() - lastSchedulerTickMs >= kSchedulerTickMs) {
     lastSchedulerTickMs = millis();
@@ -500,6 +563,7 @@ void loop() {
   if (mqttClient.connected() && millis() - lastTelemetryMs >= kTelemetryIntervalMs) {
     lastTelemetryMs = millis();
     publishTelemetry();
+    publishAvailability();
     publishControllerState();
   }
 }

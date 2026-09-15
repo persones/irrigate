@@ -37,6 +37,7 @@ bool initRelayDriver(uint8_t i2cAddress, uint8_t channels) {
 
 void relayChannelOn(uint8_t channel) {
   if (!validChannel(channel)) {
+    Serial.printf("Relay: invalid channel %u\n", channel);
     return;
   }
   g_state |= channelMask(channel);

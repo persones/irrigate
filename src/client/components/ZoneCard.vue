@@ -43,6 +43,9 @@
       <button class="btn btn-edit" @click="$emit('edit-schedule', zone.id)">
         Schedule
       </button>
+      <button class="btn btn-delete" @click="$emit('delete-zone', zone.id)">
+        Delete
+      </button>
     </div>
   </div>
 </template>
@@ -58,7 +61,7 @@ export default {
       required: true,
     },
   },
-  emits: ['turn-on', 'turn-off', 'toggle-enabled', 'edit-schedule'],
+  emits: ['turn-on', 'turn-off', 'toggle-enabled', 'edit-schedule', 'delete-zone'],
   computed: {
     scheduleDays() {
       return (this.zone.schedule.days || []).map((d) => DAY_LABELS[d] || d).join(' ');
@@ -174,6 +177,11 @@ export default {
 
 .btn-edit {
   background: var(--color-primary, #1976d2);
+  color: #fff;
+}
+
+.btn-delete {
+  background: #7a1f1f;
   color: #fff;
 }
 </style>
