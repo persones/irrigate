@@ -30,9 +30,23 @@ function validateChannel(channel) {
 
 function validateSchedule(schedule) {
   if (!schedule || typeof schedule !== 'object') return 'schedule must be an object';
-  if (!Array.isArray(schedule.days) || schedule.days.some((d) => !VALID_DAYS.includes(d))) {
-    return 'schedule.days must be an array of day abbreviations (sun–sat)';
+
+  const mode = schedule.mode || 'weekly';
+  if (mode === 'interval') {
+    if (!Number.isInteger(schedule.intervalDays) || schedule.intervalDays < 1) {
+      return 'schedule.intervalDays must be a positive integer';
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(schedule.anchorDate)) {
+      return 'schedule.anchorDate must be YYYY-MM-DD';
+    }
+  } else if (mode === 'weekly') {
+    if (!Array.isArray(schedule.days) || schedule.days.some((d) => !VALID_DAYS.includes(d))) {
+      return 'schedule.days must be an array of day abbreviations (sun–sat)';
+    }
+  } else {
+    return "schedule.mode must be 'weekly' or 'interval'";
   }
+
   if (!/^\d{2}:\d{2}$/.test(schedule.startTime)) {
     return 'schedule.startTime must be HH:MM';
   }

@@ -11,14 +11,36 @@ import { getWeatherData, getSoilMoisture } from './routes/sensors.js';
 const activeTimers = {};
 
 /**
- * Returns true if today is in the zone's scheduled days.
- * @param {string[]} days  e.g. ['mon','wed','fri']
+ * Returns the number of whole calendar days between an anchor date and today
+ * (local time), based on midnight-to-midnight boundaries.
+ * @param {string} anchorDate  e.g. '2026-09-01'
+ * @returns {number}
+ */
+function daysSinceAnchor(anchorDate) {
+  const [year, month, day] = anchorDate.split('-').map(Number);
+  const anchor = new Date(year, month - 1, day);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((today - anchor) / (24 * 60 * 60 * 1000));
+}
+
+/**
+ * Returns true if today matches the zone's schedule.
+ * Supports two schedule modes:
+ *  - 'weekly' (default): waters on specific days of the week.
+ *  - 'interval': waters every N days, counted from an anchor date.
+ * @param {object} schedule
  * @returns {boolean}
  */
-function isScheduledToday(days) {
+function isScheduledToday(schedule) {
+  if (schedule.mode === 'interval') {
+    const diff = daysSinceAnchor(schedule.anchorDate);
+    return diff >= 0 && diff % schedule.intervalDays === 0;
+  }
+
   const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
   const today = dayNames[new Date().getDay()];
-  return days.includes(today);
+  return (schedule.days || []).includes(today);
 }
 
 /**
@@ -109,7 +131,7 @@ export function startScheduler(config) {
   return setInterval(async () => {
     for (const zone of config.zones) {
       if (!zone.enabled) continue;
-      if (!isScheduledToday(zone.schedule.days)) continue;
+      if (!isScheduledToday(zone.schedule)) continue;
       if (!isStartTime(zone.schedule.startTime)) continue;
 
       const skip = await shouldSkip(config);

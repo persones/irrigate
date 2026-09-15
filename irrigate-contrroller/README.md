@@ -76,7 +76,9 @@ Schedule supports:
 
 - schedule.startTime in HH:MM
 - schedule.durationMin or schedule.duration
-- schedule.days as array or csv string using sun..sat
+- schedule.mode: "weekly" (default) or "interval"
+- schedule.days as array or csv string using sun..sat (weekly mode)
+- schedule.intervalDays and schedule.anchorDate (YYYY-MM-DD) for interval mode — waters every N days counting from the anchor date
 
 ## Run
 

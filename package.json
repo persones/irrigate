@@ -6,6 +6,7 @@
     "dev": "nodemon src/server/main.js -w src/server",
     "serve": "nodemon src/server/main.js -w src/server",
     "start": "NODE_ENV=production node src/server/main.js",
+    "simulate:controller": "node src/controller-simulator/index.js",
     "build": "vite build",
     "sec": "vite build --mode secondary"
   },
@@ -15,13 +16,15 @@
     "cors": "^2.8.5",
     "d3": "^7.9.0",
     "express": "^4.18.2",
-    "i2c-bus": "^5.2.3",
     "mqtt": "^5.10.3",
     "mongodb": "^6.4.0",
     "socket.io": "^4.7.0",
     "socket.io-client": "^4.7.0",
     "vite-express": "*",
     "vue": "^3.2.45"
+  },
+  "optionalDependencies": {
+    "i2c-bus": "^5.2.3"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.0.0",
