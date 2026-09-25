@@ -4,7 +4,7 @@
  */
 
 import express from 'express';
-import { readAnalog } from '../relay-adapter.js';
+import { getCachedSoilMoisture } from '../mqtt-service.js';
 
 const router = express.Router();
 
@@ -40,16 +40,13 @@ export async function getWeatherData(config) {
 }
 
 /**
- * Read the soil moisture sensor via the BeagleBone ADC.
- * Returns a percentage 0–100 (0 = dry, 100 = saturated).
- * @param {object} config
- * @returns {Promise<number>}
+ * Read latest soil moisture value received from Feather over MQTT.
+ * Returns null when no telemetry has been received yet.
+ * @returns {Promise<number|null>}
  */
-export async function getSoilMoisture(config) {
-  const pin = config.sensor?.soilMoisturePin ?? 'P9_33';
-  const raw = await readAnalog(pin);
-  // Capacitive sensors output high voltage when dry; invert so 100% = wet
-  return Math.round((1 - raw) * 100);
+export async function getSoilMoisture() {
+  const value = getCachedSoilMoisture();
+  return Number.isFinite(value) ? value : null;
 }
 
 // ─── Route handlers ──────────────────────────────────────────────────────────
@@ -62,7 +59,7 @@ router.get('/', async (req, res) => {
   const config = req.app.locals.config;
   try {
     const [moisture, weather] = await Promise.allSettled([
-      getSoilMoisture(config),
+      getSoilMoisture(),
       getWeatherData(config),
     ]);
 
