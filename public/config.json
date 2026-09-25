@@ -7,18 +7,16 @@
       "enabled": true,
       "active": false,
       "schedule": {
-        "days": [
-          "mon",
-          "wed",
-          "fri"
-        ],
+        "mode": "interval",
         "startTime": "06:00",
-        "duration": 15
+        "duration": 7,
+        "intervalDays": 2,
+        "anchorDate": "2026-09-18"
       }
     },
     {
-      "id": "df19cf02-a138-448e-a99c-814a006b2f17",
-      "name": "tee",
+      "id": "23906f56-cfcd-48e2-a1a5-d98ed9c2ed7a",
+      "name": "Zone 2",
       "channel": 2,
       "enabled": true,
       "active": false,
@@ -33,9 +31,25 @@
       }
     },
     {
-      "id": "80e5964e-9fbb-4d3a-967f-92e865a82ee0",
-      "name": "gsgs",
-      "channel": 5,
+      "id": "c413219f-9004-42c1-9325-1d2aa4fdea0e",
+      "name": "Zone 3",
+      "channel": 3,
+      "enabled": true,
+      "active": false,
+      "schedule": {
+        "days": [
+          "mon",
+          "wed",
+          "fri"
+        ],
+        "startTime": "06:00",
+        "duration": 15
+      }
+    },
+    {
+      "id": "e75daafa-ecd1-4a35-95d4-45253a568e10",
+      "name": "zone4",
+      "channel": 4,
       "enabled": true,
       "active": false,
       "schedule": {

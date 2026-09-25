@@ -110,7 +110,7 @@ function subscribeCoreTopics() {
 }
 
 function normalizeConfigForController(config) {
-  return {P
+  return {
     /*version: 1,
     timezone: process.env.IRRIGATE_TIMEZONE || 'UTC0',
     relay: {
